@@ -1,6 +1,7 @@
 *.pdf
 *.txt
 *.json
+!requirements.txt
 # TCGA_SCC_pdf_selected/
 # TCGA_SCC_pdf_selected_OCR/
 # OCR_text_annotation/

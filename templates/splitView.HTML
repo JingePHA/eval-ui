@@ -5,49 +5,51 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pathology Report Evaluation</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body>
-    <!-- Sidebar for file browser -->
-    <div class="file-browser" id="fileBrowser">
-        <h2>File Browser</h2>
-        <ul id="fileList"></ul>
-    </div>
-    
+    <!-- Main Content Area with Flex Layout -->
     <div class="main-content">
-        <!-- PDF iframe display -->
-        <div class="container" id="pdfContainer">
-            <h2>PDF Report</h2>
-            <iframe id="pdfIframe" class="pdf-frame"></iframe>
+        <!-- Sidebar for file browser -->
+        <div class="file-browser" id="fileBrowser">
+            <h2>File Browser</h2>
+            <ul id="fileList"></ul>
+        </div>
+        
+        <!-- Left Container for PDF or OCR Text -->
+        <div class="container" id="leftContainer">
+            <select id="leftDropdown" class="dropdown-title">
+                <option value="pdf">PDF Report</option>
+                <option value="ocr">OCR Text</option>
+            </select>
+            <div id="loadingSpinner" class="loading-spinner" style="display: none;"></div>
+            <iframe id="pdfIframe" class="pdf-frame" style="display:none;"></iframe>
+            <pre id="ocrTextContainerLeft" class="text-container" style="display:none;"></pre>
         </div>
 
-        <!-- OCR text container with zoom controls at the top -->
-        <div class="container" id="ocrContainer">
-            <h2>OCR Text</h2>
-            <!-- Zoom and Annotation Controls for OCR Text -->
-            <div class="zoom-controls">
-                <button id="zoomInTextButton">+</button>
-                <button id="zoomOutTextButton">-</button>
-                <button id="resetTextZoomButton">↻</button>
-                <button id="highlightToggleButton">Toggle Highlight</button>
-                <button id="eraseToggleButton">Erase Highlight</button>
-                <button id="addCommentButton">Add Comment</button> <!-- New Add Comment button -->
-            </div>
-            <pre id="ocrTextContainer" class="text-container" contenteditable="true"></pre>
+        <!-- Right Container for PI Extraction or OCR Text -->
+        <div class="container" id="rightContainer">
+            <select id="rightDropdown" class="dropdown-title">
+                <option value="pi">PI Extraction</option>
+                <option value="ocr">OCR Text</option>
+            </select>
+            <div id="piTableContainer" style="display:none;"></div>
+            <pre id="ocrTextContainerRight" class="text-container" style="display:none;"></pre>
+            <button id="confirmEditButton" class="confirm-button">Confirm Edit</button>
         </div>
     </div>
     
-    <!-- Footer navigation bar with toggle button -->
-    <div class="navigation">
+    <!-- Footer with navigation and progress indicator -->
+    <div class="footer">
         <button id="toggleSidebarButton">Toggle File Browser</button>
-        <div>
+        <div class="navigation-buttons">
             <button id="prevButton">Previous</button>
             <button id="nextButton">Next</button>
         </div>
-        <div id="progressIndicator">1/100</div>
-        <button id="confirmEditButton">Confirm Edit</button>
+        <div id="progressIndicator" class="progress-indicator">1/100</div>
     </div>
 
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
     <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>

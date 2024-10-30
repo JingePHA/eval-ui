@@ -1,185 +1,214 @@
-/* General body styling */
-body {
-    font-family: Arial, sans-serif;
-    margin: 0;
-    padding: 0;
+/* Main content layout with flexbox */
+.main-content {
     display: flex;
-    flex-direction: column;
-    height: 100vh;
+    gap: 20px;
+    padding: 20px;
+    height: calc(100vh - 60px); /* Full viewport height minus footer height */
+    overflow: hidden;
+    box-sizing: border-box;
 }
 
-/* Sidebar styling */
+/* File Browser styling */
 .file-browser {
     width: 200px;
+    max-height: 100%; /* Match height with main content */
     overflow-y: auto;
-    height: 100vh;
-    border-right: 1px solid #ccc;
-    position: fixed;
-    left: 0;
-    top: 0;
-    padding-top: 40px;
+    border-right: 1px solid #ddd;
+    padding: 0px;
     box-sizing: border-box;
-    transition: transform 0.3s ease;
 }
 
-.file-browser.hidden {
-    transform: translateX(-220px);
+.file-browser li {
+    font-size: 14px; /* Adjust size as needed */
+    line-height: 1.5;
 }
 
-.file-browser h2 {
-    text-align: center;
-    margin-top: 0;
-    font-size: 1.5em;
-}
-
-.file-browser ul {
+/* No bullet points for file list */
+#fileList {
     list-style-type: none;
     padding: 0;
 }
 
-.file-browser ul li {
-    padding: 8px;
-    cursor: pointer;
-    font-size: 0.75em;
+/* Styles for different file types */
+.file-browser .current-file {
+    font-weight: bold;
+    color: #4CAF50; /* Green color for current file */
 }
 
-.file-browser ul li:hover {
-    background-color: #e0e0e0;
+.file-browser .viewed-file {
+    color: #888; /* Gray color for viewed files */
 }
 
-/* Main content styling */
-.main-content {
-    display: flex;
-    flex-direction: row;
-    padding: 20px;
-    margin-left: 220px;
-    width: calc(100% - 240px);
-    height: calc(100vh - 50px);
-    box-sizing: border-box;
-    transition: margin-left 0.3s ease, width 0.3s ease;
+.file-browser .non-viewed-file {
+    color: #000; /* Black color for non-viewed files */
 }
 
-.main-content.full-width {
-    margin-left: 0;
-    width: 100%;
+/* Style for file browser list items */
+.file-browser li {
+    font-size: 14px; /* Adjust font size as needed */
+    line-height: 1.5;
+    padding: 8px; /* Add padding for better readability */
 }
 
-/* Container styling */
+/* Light background for every other file (even rows) */
+.file-browser li:nth-child(even) {
+    background-color: #f4f4f4; /* Light gray background for even items */
+}
+
+/* Background color for odd rows */
+.file-browser li:nth-child(odd) {
+    background-color: #ffffff; /* White background for odd items */
+}
+
+/* Optional: Highlight on hover */
+.file-browser li:hover {
+    background-color: #e0f7fa; /* Slightly darker color on hover */
+}
+/* Container styling for left and right sections */
 .container {
     flex: 1;
-    border: 1px solid #ccc;
-    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    height: 100%; /* Match height with main content */
+    overflow: hidden;
     box-sizing: border-box;
-    height: 100%;
-    overflow-y: auto;
-    position: relative;
 }
 
-.pdf-frame {
+/* Dropdown titles as headers */
+.dropdown-title {
+    font-size: 18px;
+    font-weight: bold;
+    padding: 10px;
+    text-align: center;
+    border-bottom: 1px solid #ddd;
+    margin: 0;
+    box-sizing: border-box;
+}
+
+/* Content areas within containers */
+.pdf-frame, .text-container, #piTableContainer {
+    flex: 1;
     width: 100%;
-    height: 100%;
-    border: none;
-}
-
-/* OCR Text container styling */
-.text-container {
-    white-space: pre-wrap;
-    font-family: monospace;
-    transform-origin: top left;
-    transition: transform 0.2s ease;
-    outline: none;
-    padding: 5px;
-    background-color: #f9f9f9;
     border: 1px solid #ddd;
+    padding: 10px;
+    overflow: auto;
+    box-sizing: border-box;
+    margin-top: 10px;
 }
 
-/* Highlighted text styling */
-.text-container span.highlighted {
-    background-color: yellow;
+/* Align the search bar to the top right */
+.dataTables_filter {
+    float: right;
 }
 
-/* Zoom controls and annotation buttons */
-.zoom-controls {
-    display: flex;
-    gap: 5px;
-    margin: 10px 0;
+/* Align "Showing 1 to 15 of 15 entries" text to the right */
+.dataTables_info {
+    float: right;
 }
 
-.zoom-controls button {
-    padding: 5px 10px;
-    font-size: 0.9em;
-    cursor: pointer;
-    border: 1px solid #ccc;
-    background-color: #f0f0f0;
-    transition: background-color 0.2s ease, color 0.2s ease;
-}
-
-.zoom-controls button:hover {
-    background-color: #ddd;
-}
-
-/* Active states for toggle buttons */
-#highlightToggleButton, #eraseToggleButton, #addCommentButton {
-    transition: background-color 0.2s, border-color 0.2s;
-}
-
-#highlightToggleButton.active, #eraseToggleButton.active, #addCommentButton.active {
-    background-color: lightblue;
-    border-color: blue;
-}
-
-/* Footer navigation bar */
-.navigation {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
+/* Footer styling */
+.footer {
     position: fixed;
     bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    background-color: #f1f1f1;
     padding: 10px 20px;
+    border-top: 1px solid #ddd;
     box-sizing: border-box;
-    border-top: 1px solid #ccc;
+}
+
+/* Center the navigation buttons in the footer */
+.navigation-buttons {
+    display: flex;
+    gap: 10px;
+    margin: 0 auto; /* Center the navigation buttons */
+}
+
+.navigation-buttons button, #toggleSidebarButton {
+    padding: 10px 15px; /* Increase padding for a larger button appearance */
+    font-size: 14px;    /* Increase font size for readability */
+}
+
+/* Progress indicator aligned to the right side of the footer */
+.progress-indicator {
+    font-size: 16px;
+    font-weight: bold;
+    margin-left: auto; /* Push progress indicator to the far right */
+}
+
+/* Confirm button at the bottom of the right container */
+.confirm-button {
+    margin-top: auto;
+    padding: 10px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+/* Hide file browser when .hidden is applied */
+.file-browser.hidden {
+    display: none;
+}
+
+/* Make main content take full width when file browser is hidden */
+.main-content.full-width {
+    width: 100%;
+}
+
+
+.confirm-button:hover {
+    background-color: #45a049;
+}
+
+/* Improved PI Table Styling */
+#piTableContainer table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+#piTableContainer th, #piTableContainer td {
+    padding: 8px;
+    border: 1px solid #ddd;
+    text-align: left;
+}
+
+#piTableContainer th {
+    background-color: #f1f1f1;
+    font-weight: bold;
+}
+
+#piTableContainer tbody tr:nth-child(even) {
     background-color: #f9f9f9;
 }
 
-#toggleSidebarButton {
-    align-self: flex-start;
+#piTableContainer tbody tr:hover {
+    background-color: #e2e2e2;
 }
 
-/* Progress indicator */
-#progressIndicator {
-    font-size: 1.1em;
-    text-align: right;
+/* Loading spinner styles */
+.loading-spinner {
+    border: 8px solid #f3f3f3; /* Light gray background */
+    border-top: 8px solid #3498db; /* Blue top border for spinner effect */
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    animation: spin 1s linear infinite;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 10; /* Ensure it appears above other elements */
 }
 
-/* Sidebar toggle button styling */
-#toggleSidebarButton {
-    padding: 5px 10px;
-    cursor: pointer;
-    border: 1px solid #ccc;
-    background-color: #f0f0f0;
-    transition: background-color 0.2s ease;
-}
-
-#toggleSidebarButton:hover {
-    background-color: #ddd;
-}
-
-/* Button hover and active styles */
-button {
-    cursor: pointer;
-    padding: 5px 10px;
-    font-size: 0.9em;
-    border: 1px solid #ccc;
-    background-color: #f0f0f0;
-    transition: background-color 0.2s ease, color 0.2s ease;
-}
-
-button:hover {
-    background-color: #e0e0e0;
-}
-
-button:active {
-    background-color: #ccc;
-    color: #444;
+/* Spinner animation */
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }

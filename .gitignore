@@ -1,7 +1,11 @@
 *.pdf
 *.txt
 *.json
+*.xlsx
 !requirements.txt
+.env
+__pycache__
+PI_gen.py
 # TCGA_SCC_pdf_selected/
 # TCGA_SCC_pdf_selected_OCR/
 # OCR_text_annotation/

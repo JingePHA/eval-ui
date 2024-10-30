@@ -1,7 +1,7 @@
-from flask import Flask, jsonify, request, send_file, render_template, make_response
+from flask import Flask, jsonify, request, make_response, send_file, render_template
+import boto3
 import os
 import json
-import boto3
 from dotenv import load_dotenv
 import threading
 import time
@@ -9,7 +9,7 @@ import time
 # Load environment variables from .env file, if running locally
 load_dotenv()
 
-app = Flask(__name__, template_folder='templates', static_folder='static')
+app = Flask(__name__)
 
 # Initialize S3 client
 s3 = boto3.client(
@@ -24,7 +24,7 @@ BUCKET_NAME = 'jinge-eval-ui-files'
 PDF_PREFIX = 'TCGA_SCC_pdf_selected/'
 OCR_PREFIX = 'TCGA_SCC_pdf_selected_OCR/'
 PI_PREFIX = 'TCGA_SCC_pdf_selected_PI/'
-PI_ANNOTATED_PREFIX = 'PI_annotated/'  # New prefix for saving edited PI files
+COMMENTS_PREFIX = 'PI_annotated/'  # Folder in S3 where comment files are saved
 
 # Ensure a temporary directory exists for downloaded files
 TEMP_DIR = 'temp_downloads'
@@ -41,16 +41,10 @@ def list_pdf_files():
     try:
         pdf_files = []
         response = s3.list_objects_v2(Bucket=BUCKET_NAME, Prefix=PDF_PREFIX)
-
-        # Check if 'Contents' key is in the response
         if 'Contents' in response:
             for obj in response['Contents']:
-                # Only add files that end with .PDF
                 if obj['Key'].endswith('.PDF'):
                     pdf_files.append(obj['Key'].split('/')[-1])
-        else:
-            print("No contents found in the specified S3 prefix.")
-        
         return jsonify(pdf_files)
     except Exception as e:
         print("Error in /pdf-files endpoint:", str(e))
@@ -64,8 +58,6 @@ def serve_pdf(filename):
         s3.download_file(BUCKET_NAME, f'{PDF_PREFIX}{filename}', download_path)
         response = make_response(send_file(download_path, as_attachment=False))
         response.headers['Content-Disposition'] = 'inline'
-        
-        # Schedule file deletion after response
         threading.Thread(target=delayed_file_delete, args=(download_path,)).start()
         return response
     except Exception as e:
@@ -79,8 +71,6 @@ def serve_ocr_text(filename):
     try:
         s3.download_file(BUCKET_NAME, f'{OCR_PREFIX}{filename}', download_path)
         response = make_response(send_file(download_path, mimetype='text/plain'))
-        
-        # Schedule file deletion after response
         threading.Thread(target=delayed_file_delete, args=(download_path,)).start()
         return response
     except Exception as e:
@@ -95,52 +85,50 @@ def serve_indicators(filename):
         s3.download_file(BUCKET_NAME, f'{PI_PREFIX}{filename}', download_path)
         with open(download_path, 'r') as file:
             indicators = json.load(file)
-        
-        # Schedule file deletion after response
         threading.Thread(target=delayed_file_delete, args=(download_path,)).start()
         return jsonify(indicators)
     except Exception as e:
         print(f"Error downloading Indicators JSON: {e}")
         return jsonify({"error": str(e)}), 500
 
-# Endpoint to save edited PI annotations to S3
+# New endpoint to load comments from S3 if available
+@app.route('/load-comments/<filename>', methods=['GET'])
+def load_comments(filename):
+    json_file_path = f"{COMMENTS_PREFIX}{filename}"
+    try:
+        # Debugging print to check the full path being requested
+        print(f"Attempting to fetch file from S3 at path: {json_file_path}")
+        
+        response = s3.get_object(Bucket=BUCKET_NAME, Key=json_file_path)
+        comments_data = json.loads(response['Body'].read().decode('utf-8'))
+        return jsonify(comments_data), 200
+    except s3.exceptions.NoSuchKey:
+        print("File not found in S3 for comments.")
+        return jsonify({"annotations": []}), 404
+    except Exception as e:
+        print(f"Error loading comments JSON: {e}")
+        return jsonify({"error": str(e)}), 500
+
+# Endpoint to save edited PI comments to S3
 @app.route('/save-edited-pi', methods=['POST'])
 def save_edited_pi():
-    try:
-        data = request.json
-        filename = data.get('filename', 'default_annotated.json')
-        annotations = data.get("annotations", [])
-        
-        # Save only the original values and comments in the output JSON
-        save_data = {
-            "annotations": [
-                {
-                    "indicator": annotation["indicator"],
-                    "original_value": annotation["original_value"],
-                    "comment": annotation.get("comment", "")
-                }
-                for annotation in annotations
-            ]
-        }
+    data = request.json
+    filename = data.get('filename', 'default_edited.json')
+    annotations = data.get("annotations", [])
 
-        # Define path for S3 upload
-        s3_key = f'{PI_ANNOTATED_PREFIX}{filename}'
-        
-        # Convert data to JSON format for upload
-        json_data = json.dumps(save_data, indent=4)
-        
-        # Upload JSON data directly to S3
-        s3.put_object(
-            Bucket=BUCKET_NAME,
-            Key=s3_key,
-            Body=json_data,
-            ContentType='application/json'
-        )
-        
-        return jsonify({"message": "File uploaded successfully", "file": s3_key}), 200
+    upload_path = os.path.join(TEMP_DIR, filename)
+    with open(upload_path, 'w') as f:
+        json.dump({"annotations": annotations}, f, indent=4)
+
+    try:
+        s3.upload_file(upload_path, BUCKET_NAME, f"{COMMENTS_PREFIX}{filename}")
+        return jsonify({"message": "File saved successfully"}), 200
     except Exception as e:
-        print(f"Error saving edited PI annotations: {e}")
+        print(f"Error saving edited PI: {e}")
         return jsonify({"error": str(e)}), 500
+    finally:
+        if os.path.exists(upload_path):
+            os.remove(upload_path)
 
 # Helper function to delay file deletion
 def delayed_file_delete(filepath, delay=2):
@@ -152,4 +140,4 @@ def delayed_file_delete(filepath, delay=2):
         print(f"Error deleting file: {e}")
 
 if __name__ == "__main__":
-    app.run(debug=False)
+    app.run(debug=True)

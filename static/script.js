@@ -235,22 +235,22 @@ async function loadIndicators(pdfFileName) {
     }
 }
 
-function displayIndicatorsAsTable(indicators) {
+async function displayIndicatorsAsTable(indicators) {
     const container = document.getElementById('piTableContainer');
     container.innerHTML = `
         <table id="piTable" class="display">
             <thead>
                 <tr>
-                    <th style="width: 30%;">Indicator</th>
-                    <th style="width: 30%;">Original Value</th>
-                    <th style="width: 40%;">Comments</th> <!-- More width for Comments -->
+                    <th style="width: 20%;">Indicator</th>
+                    <th style="width: 25%;">Original Value</th>
+                    <th style="width: 55%;">Comments</th> <!-- More width for Comments -->
                 </tr>
             </thead>
             <tbody></tbody>
         </table>
     `;
 
-    // Initialize annotations array based on piOrder
+    // Clear existing annotations and populate according to piOrder
     annotations = piOrder.map(key => ({
         indicator: key,
         original_value: indicators[key] || "NA",
@@ -258,34 +258,56 @@ function displayIndicatorsAsTable(indicators) {
     }));
 
     const tbody = container.querySelector('tbody');
-    
-    // Populate table rows in the order defined by piOrder
+
+    // Load existing comments from S3 if available
+    const filename = pdfFiles[currentIndex].replace('.PDF', '_PI_annotated.json');
+    let commentsData = { annotations: [] };
+
+    try {
+        const response = await fetch(`/load-comments/${filename}`);
+        if (response.ok) {
+            commentsData = await response.json();
+        }
+    } catch (error) {
+        console.error("Failed to load comments:", error);
+    }
+
+    // Populate table rows according to piOrder and apply comments
     piOrder.forEach(key => {
         const originalValue = indicators[key] || "NA";
+        const comment = commentsData.annotations.find(item => item.indicator === key)?.comment || "";
         const row = document.createElement('tr');
         row.innerHTML = `
             <td>${key}</td>
             <td>${originalValue}</td>
-            <td contenteditable="true" class="comment-cell" data-indicator="${key}"></td>
+            <td contenteditable="true" class="comment-cell" data-indicator="${key}">${comment}</td>
         `;
         tbody.appendChild(row);
     });
 
-    // Initialize DataTable without ordering and with custom settings
-    $('#piTable').DataTable({
-        pageLength: 15,            // Show 15 entries by default
-        lengthChange: false,       // Remove entries-per-page dropdown
-        paging: false,             // Disable pagination controls
-        searching: true,           // Enable search bar
-        info: true,                // Show "Showing 1 to 15 of 15 entries"
-        ordering: false,           // Disable internal sorting to maintain order
-        dom: 'lrtip',              // Customize layout to hide pagination controls
-        language: {
-            info: "Showing 1 to 15 of 15 entries" // Customize info text
-        }
-    });
+    // Ensure DataTable is initialized only after rows are populated
+    if ($.fn.DataTable.isDataTable('#piTable')) {
+        $('#piTable').DataTable().clear().destroy();
+    }
 
-    // Update annotations on cell blur (save comments)
+    // Initialize DataTable if data exists
+    if (tbody.children.length > 0) {
+        $('#piTable').DataTable({
+            pageLength: 15,
+            lengthChange: false,
+            paging: false,
+            searching: true,
+            info: true,
+            ordering: false,
+            dom: 'lrtip',
+            language: {
+                info: "Showing 1 to 15 of 15 entries",
+                emptyTable: "" // Prevent "No data available" message when table is populated
+            }
+        });
+    }
+
+    // Update annotations on cell blur
     container.querySelectorAll('.comment-cell').forEach(cell => {
         cell.addEventListener('blur', () => {
             const indicator = cell.getAttribute('data-indicator');

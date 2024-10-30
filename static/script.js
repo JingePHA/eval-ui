@@ -127,6 +127,45 @@ function setDefaultView() {
     document.getElementById('ocrTextContainerRight').style.display = 'none';
 }
 
+// Event listener for left dropdown to toggle views and prevent unnecessary reloads
+document.getElementById('leftDropdown').addEventListener('change', function() {
+    const selectedOption = this.value;
+    const pdfFile = pdfFiles[currentIndex];
+    const pdfIframe = document.getElementById('pdfIframe');
+    
+    if (selectedOption === 'pdf' && currentLeftView !== 'pdf') {
+        if (loadedPdfFile !== pdfFile) {
+            const pdfPath = `${pdfBaseUrl}/${pdfFile}`;
+            pdfIframe.src = pdfPath;
+            loadedPdfFile = pdfFile;
+        }
+        pdfIframe.style.display = 'block';
+        document.getElementById('ocrTextContainerLeft').style.display = 'none';
+        currentLeftView = 'pdf';
+    } else if (selectedOption === 'ocr' && currentLeftView !== 'ocr') {
+        pdfIframe.style.display = 'none';
+        document.getElementById('ocrTextContainerLeft').style.display = 'block';
+        loadOCRText(pdfFile, 'ocrTextContainerLeft');  // Ensure OCR text is loaded
+        currentLeftView = 'ocr';
+    }
+});
+
+// Event listener for right dropdown to toggle views and prevent unnecessary reloads
+document.getElementById('rightDropdown').addEventListener('change', function() {
+    const selectedOption = this.value;
+    const pdfFile = pdfFiles[currentIndex];
+    
+    if (selectedOption === 'pi') {
+        loadIndicators(pdfFile);  // Reload PI extraction to ensure it's displayed
+        document.getElementById('piTableContainer').style.display = 'block';
+        document.getElementById('ocrTextContainerRight').style.display = 'none';
+    } else if (selectedOption === 'ocr') {
+        document.getElementById('piTableContainer').style.display = 'none';
+        document.getElementById('ocrTextContainerRight').style.display = 'block';
+        loadOCRText(pdfFile, 'ocrTextContainerRight');  // Ensure OCR text is loaded
+    }
+});
+
 async function navigateToFile(index) {
     if (index !== currentIndex) {
         await autoSaveAnnotations(); // Auto-save before navigating to another file
@@ -290,7 +329,5 @@ async function autoSaveAnnotations() {
         console.error("Error saving annotations:", error);
     }
 }
-
-
 
 populateFileBrowser();

@@ -155,6 +155,9 @@ function loadPDF(index) {
         loadingSpinner.style.display = 'none';
     };
 
+    // Update current file styling
+    updateFileClasses();
+
     // Load PI extraction table in the right container as default view
     loadIndicators(pdfFile);
     document.getElementById('piTableContainer').style.display = 'block';

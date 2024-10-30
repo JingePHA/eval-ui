@@ -4,9 +4,8 @@ const ocrBaseUrl = '/ocr';
 const indicatorsBaseUrl = '/indicators';
 let pdfFiles = [];
 let currentIndex = 0;
-let annotations = []; // Stores only the latest annotation for each PI entry
-let loadedPdfFile = null; // Track the currently loaded PDF file to avoid reloading
-let currentLeftView = 'pdf'; // Track current view for the left container
+let loadedPdfFile = null;
+let currentLeftView = 'pdf';
 
 const piOrder = [
     "Diagnosis", 
@@ -25,6 +24,7 @@ const piOrder = [
 ];
 
 const fileStatuses = {}; // Track file statuses
+let indicatorsData = {}; // Stores current indicators with annotations
 
 document.getElementById('toggleSidebarButton').addEventListener('click', toggleSidebar);
 
@@ -48,11 +48,11 @@ async function populateFileBrowser() {
                     listItem.classList.add("non-viewed-file");
                 }
 
-                listItem.onclick = () => loadPDF(index);
+                listItem.onclick = () => navigateToFile(index);
                 fileList.appendChild(listItem);
             });
             loadPDF(0); // Load the first file
-            setDefaultView(); // Set default views for left and right containers
+            setDefaultView();
         } else {
             console.warn("No PDF files found.");
         }
@@ -76,7 +76,6 @@ function updateFileClasses() {
     });
 }
 
-// Function to toggle the file browser visibility
 document.getElementById('toggleSidebarButton').addEventListener('click', toggleSidebar);
 
 function toggleSidebar() {
@@ -86,27 +85,27 @@ function toggleSidebar() {
     mainContent.classList.toggle('full-width');
 }
 
-// Functions to navigate between files
 document.getElementById('prevButton').addEventListener('click', showPreviousFile);
 document.getElementById('nextButton').addEventListener('click', showNextFile);
 
-function showPreviousFile() {
+async function showPreviousFile() {
     if (currentIndex > 0) {
-        currentIndex--;  // Move to the previous file
+        await autoSaveAnnotations(); // Auto-save before navigation
+        currentIndex--;
         loadPDF(currentIndex);
-        updateFileClasses();  // Update file list classes
+        updateFileClasses();
     }
 }
 
-function showNextFile() {
+async function showNextFile() {
     if (currentIndex < pdfFiles.length - 1) {
-        currentIndex++;  // Move to the next file
+        await autoSaveAnnotations(); // Auto-save before navigation
+        currentIndex++;
         loadPDF(currentIndex);
-        updateFileClasses();  // Update file list classes
+        updateFileClasses();
     }
 }
 
-// Set default view to display PDF on the left and PI extraction on the right
 function setDefaultView() {
     document.getElementById('leftDropdown').value = 'pdf';
     document.getElementById('rightDropdown').value = 'pi';
@@ -115,19 +114,26 @@ function setDefaultView() {
     const pdfPath = `${pdfBaseUrl}/${pdfFile}`;
     const pdfIframe = document.getElementById('pdfIframe');
 
-    // Load PDF report in the left container and set initial display if not already loaded
     if (loadedPdfFile !== pdfFile) {
         pdfIframe.src = pdfPath;
-        loadedPdfFile = pdfFile; // Cache the currently loaded file to prevent reloads
+        loadedPdfFile = pdfFile;
     }
     pdfIframe.style.display = 'block';
     document.getElementById('ocrTextContainerLeft').style.display = 'none';
     currentLeftView = 'pdf';
 
-    // Load PI extraction table in the right container and show it
     loadIndicators(pdfFile);
     document.getElementById('piTableContainer').style.display = 'block';
     document.getElementById('ocrTextContainerRight').style.display = 'none';
+}
+
+async function navigateToFile(index) {
+    if (index !== currentIndex) {
+        await autoSaveAnnotations(); // Auto-save before navigating to another file
+        currentIndex = index;
+        loadPDF(currentIndex);
+        updateFileClasses();
+    }
 }
 
 function loadPDF(index) {
@@ -137,28 +143,23 @@ function loadPDF(index) {
     const pdfIframe = document.getElementById('pdfIframe');
     const loadingSpinner = document.getElementById('loadingSpinner');
 
-    // Show the loading spinner
     loadingSpinner.style.display = 'block';
 
-    // Only set the src if a different file is selected
     if (loadedPdfFile !== pdfFile) {
         pdfIframe.src = pdfPath;
-        loadedPdfFile = pdfFile; // Update loaded file to avoid reloading on dropdown change
+        loadedPdfFile = pdfFile;
     }
     pdfIframe.style.display = 'block';
     document.getElementById('ocrTextContainerLeft').style.display = 'none';
     document.getElementById('leftDropdown').value = 'pdf';
     currentLeftView = 'pdf';
 
-    // Hide spinner once the PDF has loaded
     pdfIframe.onload = () => {
         loadingSpinner.style.display = 'none';
     };
 
-    // Update current file styling
     updateFileClasses();
 
-    // Load PI extraction table in the right container as default view
     loadIndicators(pdfFile);
     document.getElementById('piTableContainer').style.display = 'block';
     document.getElementById('ocrTextContainerRight').style.display = 'none';
@@ -167,46 +168,6 @@ function loadPDF(index) {
     updateProgressIndicator();
     loadOCRText(pdfFile, 'ocrTextContainerLeft');
     loadOCRText(pdfFile, 'ocrTextContainerRight');
-}
-
-// Event listener for left dropdown to toggle views and prevent unnecessary reloads
-document.getElementById('leftDropdown').addEventListener('change', function() {
-    const selectedOption = this.value;
-    const pdfFile = pdfFiles[currentIndex];
-    const pdfIframe = document.getElementById('pdfIframe');
-    
-    if (selectedOption === 'pdf' && currentLeftView !== 'pdf') {
-        if (loadedPdfFile !== pdfFile) {
-            const pdfPath = `${pdfBaseUrl}/${pdfFile}`;
-            pdfIframe.src = pdfPath;
-            loadedPdfFile = pdfFile;
-        }
-        pdfIframe.style.display = 'block';
-        document.getElementById('ocrTextContainerLeft').style.display = 'none';
-        currentLeftView = 'pdf';
-    } else if (selectedOption === 'ocr' && currentLeftView !== 'ocr') {
-        pdfIframe.style.display = 'none';
-        document.getElementById('ocrTextContainerLeft').style.display = 'block';
-        currentLeftView = 'ocr';
-    }
-});
-
-document.getElementById('rightDropdown').addEventListener('change', function() {
-    const selectedOption = this.value;
-    const pdfFile = pdfFiles[currentIndex];
-    
-    if (selectedOption === 'pi') {
-        loadIndicators(pdfFile);
-        document.getElementById('piTableContainer').style.display = 'block';
-        document.getElementById('ocrTextContainerRight').style.display = 'none';
-    } else if (selectedOption === 'ocr') {
-        document.getElementById('piTableContainer').style.display = 'none';
-        document.getElementById('ocrTextContainerRight').style.display = 'block';
-    }
-});
-
-function updateProgressIndicator() {
-    document.getElementById('progressIndicator').textContent = `${currentIndex + 1} / ${pdfFiles.length}`;
 }
 
 async function loadOCRText(pdfFileName, containerId) {
@@ -228,8 +189,8 @@ async function loadIndicators(pdfFileName) {
     try {
         const response = await fetch(jsonPath);
         if (!response.ok) throw new Error(`Failed to fetch Indicators JSON: ${jsonFileName}`);
-        const indicators = await response.json();
-        displayIndicatorsAsTable(indicators);
+        indicatorsData = await response.json();
+        displayIndicatorsAsTable(indicatorsData);
     } catch (error) {
         console.error("Error loading indicators JSON:", error);
     }
@@ -243,39 +204,18 @@ async function displayIndicatorsAsTable(indicators) {
                 <tr>
                     <th style="width: 20%;">Indicator</th>
                     <th style="width: 25%;">Original Value</th>
-                    <th style="width: 55%;">Comments</th> <!-- More width for Comments -->
+                    <th style="width: 55%;">Comments</th>
                 </tr>
             </thead>
             <tbody></tbody>
         </table>
     `;
 
-    // Clear existing annotations and populate according to piOrder
-    annotations = piOrder.map(key => ({
-        indicator: key,
-        original_value: indicators[key] || "NA",
-        comment: ""
-    }));
-
     const tbody = container.querySelector('tbody');
 
-    // Load existing comments from S3 if available
-    const filename = pdfFiles[currentIndex].replace('.PDF', '_PI_annotated.json');
-    let commentsData = { annotations: [] };
-
-    try {
-        const response = await fetch(`/load-comments/${filename}`);
-        if (response.ok) {
-            commentsData = await response.json();
-        }
-    } catch (error) {
-        console.error("Failed to load comments:", error);
-    }
-
-    // Populate table rows according to piOrder and apply comments
     piOrder.forEach(key => {
-        const originalValue = indicators[key] || "NA";
-        const comment = commentsData.annotations.find(item => item.indicator === key)?.comment || "";
+        const originalValue = indicators[key]?.value || indicators[key] || "NA";
+        const comment = indicators[key]?.comment || "";
         const row = document.createElement('tr');
         row.innerHTML = `
             <td>${key}</td>
@@ -285,12 +225,10 @@ async function displayIndicatorsAsTable(indicators) {
         tbody.appendChild(row);
     });
 
-    // Ensure DataTable is initialized only after rows are populated
     if ($.fn.DataTable.isDataTable('#piTable')) {
         $('#piTable').DataTable().clear().destroy();
     }
 
-    // Initialize DataTable if data exists
     if (tbody.children.length > 0) {
         $('#piTable').DataTable({
             pageLength: 15,
@@ -302,45 +240,57 @@ async function displayIndicatorsAsTable(indicators) {
             dom: 'lrtip',
             language: {
                 info: "Showing 1 to 15 of 15 entries",
-                emptyTable: "" // Prevent "No data available" message when table is populated
+                emptyTable: ""
             }
         });
     }
 
-    // Update annotations on cell blur
     container.querySelectorAll('.comment-cell').forEach(cell => {
         cell.addEventListener('blur', () => {
             const indicator = cell.getAttribute('data-indicator');
             const comment = cell.textContent;
-            const annotationIndex = annotations.findIndex(a => a.indicator === indicator);
-            if (annotationIndex > -1) {
-                annotations[annotationIndex].comment = comment;
+            if (indicators[indicator]) {
+                indicators[indicator].comment = comment;
             }
         });
     });
 }
 
-document.getElementById('confirmEditButton').addEventListener('click', async () => {
+async function autoSaveAnnotations() {
     const pdfFile = pdfFiles[currentIndex];
-    const jsonFileName = `${pdfFile.replace('.PDF', '_PI_annotated.json')}`;
+    const jsonFileName = `${pdfFile.replace('.PDF', '_PI.json')}`;
 
-    const data = { annotations, filename: jsonFileName };
+    // Create a deep copy of indicatorsData to avoid modifying the original structure
+    const formattedData = JSON.parse(JSON.stringify(indicatorsData));
+
+    // Ensure each entry has a `comment` field
+    piOrder.forEach(key => {
+        if (typeof formattedData[key] === 'string') {
+            // If the original structure was a string, convert it to an object with `value` and `comment`
+            formattedData[key] = {
+                value: formattedData[key],
+                comment: indicatorsData[key]?.comment || ""
+            };
+        } else if (formattedData[key]?.value) {
+            // If it's already an object, add `comment` if it doesn’t exist
+            formattedData[key].comment = indicatorsData[key]?.comment || "";
+        }
+    });
 
     try {
         const response = await fetch('/save-edited-pi', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data),
+            body: JSON.stringify({ indicators: formattedData, filename: jsonFileName })
         });
-        if (response.ok) {
-            alert('Annotations saved successfully to PI_annotated.');
-        } else {
+        if (!response.ok) {
             console.error('Failed to save annotations');
         }
     } catch (error) {
         console.error("Error saving annotations:", error);
     }
-});
+}
 
-// Initial population of file browser and setting of default view
+
+
 populateFileBrowser();

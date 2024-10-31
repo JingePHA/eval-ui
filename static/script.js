@@ -175,6 +175,10 @@ async function navigateToFile(index) {
     }
 }
 
+function updateProgressIndicator() {
+    document.getElementById('progressIndicator').textContent = `${currentIndex + 1} / ${pdfFiles.length}`;
+}
+
 function loadPDF(index) {
     currentIndex = index;
     const pdfFile = pdfFiles[currentIndex];
